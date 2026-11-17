@@ -3,7 +3,6 @@
   "profile_id": "demo-freelancer",
   "display_name": "Demo Freelancer — Synthetic",
   "skills": ["Python", "FastAPI", "PostgreSQL", "pandas", "Streamlit", "pytest"],
-  "hourly_rate_usd": 15,
   "availability_hours_per_week": 20,
   "evidence_document_ids": ["project-api", "project-data", "project-docs"],
   "unsupported_skills": ["React", "Kubernetes", "AWS production operations", "professional copywriting"]

@@ -29,7 +29,7 @@ class Settings:
     api_key: str = field(default="", repr=False)
 
 
-def generate(settings: Settings, job: str, feedback: str = "") -> str:
+def generate(settings: Settings, job: str, feedback: str = "", *, output_schema=None, system_prompt=None) -> str:
     if settings.provider not in {"ollama", "compatible_api"}:
         raise ProviderError("Unsupported model provider.")
     url = urlparse(settings.base_url)
@@ -43,10 +43,10 @@ def generate(settings: Settings, job: str, feedback: str = "") -> str:
         raise ProviderError("Configure a model name first.")
     if settings.provider == "compatible_api" and not settings.api_key.strip():
         raise ProviderError("Add your API key in the local settings before analyzing. For Groq, run setup_groq.py in your terminal.")
-    schema = JobAnalysis.model_json_schema()
+    schema = output_schema or JobAnalysis.model_json_schema()
     messages = [
-        {"role": "system", "content": SYSTEM_PROMPT + "\nJSON schema:\n" + json.dumps(schema)},
-        {"role": "user", "content": json.dumps({"job_text": job})},
+        {"role": "system", "content": (system_prompt or SYSTEM_PROMPT) + "\nJSON schema:\n" + json.dumps(schema)},
+        {"role": "user", "content": json.dumps({"source_text": job})},
     ]
     if feedback:
         messages.append({"role": "user", "content": feedback})

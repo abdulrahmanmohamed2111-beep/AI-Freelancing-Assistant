@@ -1,0 +1,17 @@
+SYNTHETIC CV FOR TESTING ONLY
+Demo Freelancer
+Python Developer
+
+Skills: Python, FastAPI, PostgreSQL, pandas, Streamlit, pytest.
+
+Education
+Completed a fictional Python development training course in 2025.
+
+Experience
+Built personal learning projects. No paid client history is claimed.
+
+Project: Inventory REST API
+Built an inventory REST API using Python and FastAPI, with PostgreSQL storage, CRUD endpoints, pytest tests and setup documentation. Ran locally with Docker Compose. Production deployment and authentication were outside scope.
+
+Project: Sales Dashboard
+Cleaned sales CSV files using pandas and built a Streamlit dashboard with monthly totals and CSV export. No business impact metrics were measured.

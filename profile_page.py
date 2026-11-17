@@ -1,4 +1,4 @@
-"""Profile editor; editing does not send profile data to an AI provider."""
+"""Profile editor with an explicit, user-triggered CV extraction flow."""
 import json
 import sqlite3
 
@@ -6,6 +6,7 @@ import streamlit as st
 from pydantic import ValidationError
 
 from assistant_core.profile import Profile, Project, demo_profile, load_profile, parse_skills, save_profile
+from cv_page import render_cv
 
 
 def render_profile():
@@ -14,7 +15,7 @@ def render_profile():
     st.write("Build a clear record of your skills and the work that supports them.")
     selection = st.radio("Profile workspace", ["My real profile", "Synthetic demo"], horizontal=True)
     workspace = "demo" if selection == "Synthetic demo" else "personal"
-    st.caption("Saved on this app's host in a local database. Profile editing makes no AI requests.")
+    st.caption("Saved locally on this app's host. Manual edits stay local; CV extraction uses your configured AI provider.")
     try:
         profile, revision = load_profile(workspace)
     except (ValueError, sqlite3.Error, OSError):
@@ -31,7 +32,9 @@ def render_profile():
     one.metric("Skills listed", len(profile.skills))
     two.metric("Projects saved", len(profile.projects))
     three.metric("Projects reviewed", sum(p.reviewed for p in profile.projects))
-    details, projects = st.tabs(["Profile details", "Project evidence"])
+    upload, details, projects = st.tabs(["Upload CV", "Profile details", "Project evidence"])
+    with upload:
+        render_cv(workspace, profile, revision)
     with details:
         with st.form(f"details_{workspace}_{revision}"):
             name = st.text_input("Display name", profile.display_name, max_chars=120)
@@ -39,19 +42,18 @@ def render_profile():
             summary = st.text_area("Experience summary", profile.summary, max_chars=5000,
                                    help="Describe your actual experience and the kind of work you deliver.")
             skills = st.text_area("Skills (separate with commas)", ", ".join(profile.skills), max_chars=3000)
-            left, right = st.columns(2)
-            rate = left.number_input("Hourly rate (USD)", min_value=0.0, max_value=10000.0,
-                                     value=float(profile.hourly_rate_usd), step=1.0)
-            hours = right.number_input("Available hours per week", min_value=0, max_value=168,
+            education = st.text_area("Education", profile.education, max_chars=5000)
+            experience = st.text_area("Experience", profile.experience, max_chars=10000)
+            hours = st.number_input("Available hours per week", min_value=0, max_value=168,
                                        value=profile.availability_hours_per_week)
-            st.caption("A rate or availability of 0 means you have not set it yet.")
+            st.caption("0 means availability is not set. Pricing will be estimated separately for each job.")
             submitted = st.form_submit_button("Save profile", type="primary")
         if submitted:
             if not name.strip():
                 st.error("Add a display name before saving.")
             else:
                 updated = profile.model_copy(update={"display_name": name, "headline": headline,
-                    "summary": summary, "skills": parse_skills(skills), "hourly_rate_usd": rate,
+                    "summary": summary, "skills": parse_skills(skills), "education": education, "experience": experience,
                     "availability_hours_per_week": hours})
                 persist(workspace, updated, revision)
     with projects:
@@ -80,6 +82,8 @@ def render_profile():
                               outcomes=outcomes, limitations=limitations, reviewed=reviewed)
                 if project:
                     values["id"] = project.id
+                    values["source_quote"] = project.source_quote
+                    values["source_id"] = project.source_id
                 replacement = Project(**values)
                 updated = profile.model_copy(deep=True)
                 updated.projects = [replacement if p.id == chosen else p for p in updated.projects]
@@ -91,7 +95,7 @@ def render_profile():
     st.divider()
     st.download_button("Export profile JSON", json.dumps({"synthetic": workspace == "demo", "profile": profile.model_dump()}, indent=2),
                        file_name=f"{workspace}-profile.json", mime="application/json")
-    st.caption("Next milestone: CV upload, reviewed extraction and retrieval with source citations.")
+    st.caption("Next milestone: retrieval from reviewed experience with source citations.")
 
 
 def persist(workspace, profile, revision):

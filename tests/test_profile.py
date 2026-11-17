@@ -40,7 +40,7 @@ class ProfileTests(unittest.TestCase):
     def test_invalid_edit_keeps_previous_data(self):
         p = Profile(display_name="Test")
         save_profile("personal", p, 0)
-        p.hourly_rate_usd = -20
+        p.availability_hours_per_week = -20
         with self.assertRaises(ValueError):
             save_profile("personal", p, 1)
         self.assertEqual(load_profile("personal")[1], 1)

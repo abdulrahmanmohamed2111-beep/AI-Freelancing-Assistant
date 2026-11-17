@@ -5,7 +5,7 @@ English UI and proposals; multiple freelance domains with a technical focus.
 
 ## Current milestone
 
-My Profile now supports editable details, skills, hourly rate, weekly availability,
+My Profile now supports editable details, skills, education, experience, weekly availability,
 project creation/editing, per-project review and JSON export. Select My profile
 from Open page. Synthetic demo and personal profiles have separate storage slots;
 loading synthetic fixtures never populates the personal profile.
@@ -14,7 +14,23 @@ Profiles persist in the Git-ignored `data/profiles.sqlite3` on the application h
 This is a single-user local implementation, not authenticated multi-user storage.
 Set `FREELANCE_DATA_DIR` to override the storage directory (used by isolated tests).
 Before online deployment, add access control and migrate to durable hosted storage.
-CV upload, extraction and RAG are still pending.
+Upload CV is the default profile tab. It supports UTF-8 TXT and text-based PDF
+(5 MB, 20 pages, 30,000 extracted characters maximum). Scanned, encrypted or
+unreadable PDFs are rejected with an explanation; OCR is not included.
+Common email/phone patterns are redacted before a user-editable text preview;
+this is not comprehensive anonymization. Only clicking Extract profile sends the
+preview text to the configured provider. The user reviews and can edit every
+extracted field and project, then explicitly approves saving. The raw upload is
+not persisted. Approved source text and project quotes are saved locally for
+future retrieval. Removing private details in the preview also removes them from
+that retained source text. Empty imported fields preserve existing values;
+nonempty fields replace them. Availability is preserved. Exact-source reimports
+update matching project IDs rather than duplicating them. Changed source files
+can create additional projects and should be reviewed before approval.
+
+Hourly rate has been removed from profiles and old saved records are migrated.
+Pricing belongs to a future per-job estimate. RAG is still pending.
+Try `fixtures/synthetic/demo_cv.txt` in the Synthetic demo workspace.
 
 Streamlit job intake and a LangGraph workflow:
 `START -> prepare -> analyze -> verify -> END`.

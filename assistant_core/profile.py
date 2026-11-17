@@ -22,6 +22,8 @@ class Project(BaseModel):
     outcomes: str = Field(default="", max_length=3000)
     limitations: str = Field(default="", max_length=3000)
     reviewed: bool = False
+    source_quote: str = ""
+    source_id: str = ""
 
 
 class Profile(BaseModel):
@@ -30,7 +32,10 @@ class Profile(BaseModel):
     headline: str = Field(default="", max_length=160)
     summary: str = Field(default="", max_length=5000)
     skills: list[str] = Field(default_factory=list)
-    hourly_rate_usd: float = Field(default=0, ge=0, le=10000, allow_inf_nan=False)
+    education: str = Field(default="", max_length=5000)
+    experience: str = Field(default="", max_length=10000)
+    cv_source_text: str = Field(default="", max_length=30000)
+    cv_source_id: str = ""
     availability_hours_per_week: int = Field(default=0, ge=0, le=168)
     projects: list[Project] = Field(default_factory=list)
 
@@ -58,6 +63,12 @@ def connect():
     try:
         connection.execute("CREATE TABLE IF NOT EXISTS profiles (workspace TEXT PRIMARY KEY, payload TEXT NOT NULL, revision INTEGER NOT NULL)")
         with connection:
+            for workspace, payload in connection.execute("SELECT workspace, payload FROM profiles").fetchall():
+                data = json.loads(payload)
+                if "hourly_rate_usd" in data:
+                    data.pop("hourly_rate_usd")
+                    connection.execute("UPDATE profiles SET payload=? WHERE workspace=?", (json.dumps(data), workspace))
+            connection.commit()
             yield connection
     finally:
         connection.close()
@@ -95,6 +106,6 @@ def demo_profile() -> Profile:
     details = json.loads((directory / "profile.json").read_text(encoding="utf-8"))
     documents = json.loads((directory / "projects.json").read_text(encoding="utf-8"))["documents"]
     return Profile(display_name=details["display_name"], headline="Python developer · Synthetic demo",
-                   skills=details["skills"], hourly_rate_usd=details["hourly_rate_usd"],
+                   skills=details["skills"],
                    availability_hours_per_week=details["availability_hours_per_week"],
                    projects=[Project(id=d["id"], title=d["title"], description=d["text"]) for d in documents])
