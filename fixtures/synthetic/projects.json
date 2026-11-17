@@ -1,0 +1,20 @@
+{
+  "synthetic": true,
+  "documents": [
+    {
+      "id": "project-api",
+      "title": "Inventory REST API",
+      "text": "SYNTHETIC DEMO PROJECT. The freelancer built an inventory REST API using Python and FastAPI. They designed PostgreSQL tables for products and stock movements, implemented CRUD endpoints and input validation, and wrote pytest integration tests. They delivered source code and setup documentation. The project ran locally with Docker Compose. Production deployment, authentication and payment processing were outside the scope. No client revenue or performance improvement was measured."
+    },
+    {
+      "id": "project-data",
+      "title": "Sales CSV Cleaning and Dashboard",
+      "text": "SYNTHETIC DEMO PROJECT. The freelancer used Python and pandas to clean sales CSV files, remove duplicate rows, normalize dates and flag missing values. They built a Streamlit dashboard showing monthly sales totals and product categories, with filters and CSV export. They reconciled dashboard totals against cleaned source files. They did not train forecasting models or use Power BI. No verified business impact figures are available."
+    },
+    {
+      "id": "project-docs",
+      "title": "Document Search Learning Prototype",
+      "text": "SYNTHETIC DEMO PROJECT. The freelancer built a learning prototype that split English text documents into chunks, generated embeddings and retrieved relevant passages using vector similarity. Results included document identifiers and source excerpts. They manually checked five example queries. This was a local prototype, not a production customer deployment. It did not include OCR, multilingual evaluation, fine-tuning or persistent agent workflows."
+    }
+  ]
+}

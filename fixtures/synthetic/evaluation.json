@@ -1,0 +1,14 @@
+{
+  "synthetic": true,
+  "purpose": "Human-authored fixture expectations, not measured model results. Fit tiers refer to demonstrated experience only, not final commercial suitability.",
+  "cases": [
+    {"job_id": "job-api", "expected_fit": "strong", "relevant_document_ids": ["project-api"], "expected_gaps": [], "clarify": ["inventory fields", "authentication", "deployment target"], "budget": "$600", "deadline": "three weeks"},
+    {"job_id": "job-data", "expected_fit": "strong", "relevant_document_ids": ["project-data"], "expected_gaps": [], "clarify": ["file sizes and schema", "budget", "deadline"], "budget": null, "deadline": null},
+    {"job_id": "job-rag", "expected_fit": "partial", "relevant_document_ids": ["project-docs"], "expected_gaps": ["OCR", "Arabic evaluation", "authentication", "production monitoring"], "clarify": ["document volume", "budget", "deadline"], "budget": null, "deadline": null},
+    {"job_id": "job-react", "expected_fit": "weak", "relevant_document_ids": [], "expected_gaps": ["React", "TypeScript", "Stripe"], "clarify": ["budget", "storefront scope"], "budget": null, "deadline": "four weeks"},
+    {"job_id": "job-writing", "expected_fit": "weak", "relevant_document_ids": [], "expected_gaps": ["published travel writing samples", "SEO copywriting"], "clarify": ["deadline", "audience"], "budget": "$300", "deadline": null},
+    {"job_id": "job-cloud", "expected_fit": "weak", "relevant_document_ids": [], "expected_gaps": ["production Kubernetes", "AWS", "Terraform", "on-call operations"], "clarify": ["support hours", "budget", "deadline"], "budget": null, "deadline": null}
+  ],
+  "forbidden_claims": ["paid client history", "measured revenue gains", "production RAG deployment", "React experience", "professional travel writing experience"],
+  "notes": "For weak matches, generic programming overlap is not sufficient evidence. Do not force retrieval to count as support. A real-data held-out evaluation must be created separately."
+}

@@ -1,0 +1,11 @@
+{
+  "synthetic": true,
+  "jobs": [
+    {"id": "job-api", "description": "Build a Python FastAPI inventory API backed by PostgreSQL. Include CRUD endpoints, automated tests and setup documentation. Budget: $600. Delivery: three weeks."},
+    {"id": "job-data", "description": "Clean sales CSV files using pandas and build a Streamlit dashboard with monthly totals, product filters and downloadable CSV reports. Please quote your price and availability."},
+    {"id": "job-rag", "description": "Build a production document assistant with vector retrieval and source citations. It must support scanned PDFs through OCR, English and Arabic, authentication and monitoring."},
+    {"id": "job-react", "description": "Build a responsive React and TypeScript storefront with Stripe payments. Production experience with React is required. Delivery: four weeks."},
+    {"id": "job-writing", "description": "Write five English travel articles of 1000 words each. Provide published travel writing samples and evidence of SEO copywriting experience. Budget: $300."},
+    {"id": "job-cloud", "description": "Operate a production Kubernetes platform on AWS. Configure Terraform, incident alerts and on-call procedures. Prior production Kubernetes operations experience is mandatory."}
+  ]
+}
