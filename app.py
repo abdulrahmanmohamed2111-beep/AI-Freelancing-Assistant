@@ -9,6 +9,7 @@ from assistant_core.providers import ProviderError, Settings, generate
 from assistant_core.sample import SAMPLE_ANALYSIS, SAMPLE_JOB
 from assistant_core.workflow import build_graph
 from ui import evidence_card, styles
+from profile_page import render_profile
 
 st.set_page_config(page_title="Freelance AI | Job analysis", page_icon="🔎", layout="wide")
 styles()
@@ -26,15 +27,21 @@ def setting(name: str, default: str = "") -> str:
 
 with st.sidebar:
     st.markdown('<div class="brand"><span class="brand-icon">f.</span>Freelance AI</div>'
-                '<div class="eyebrow">Workspace</div><div class="nav-active">◎ &nbsp; Job analysis</div>'
+                '<div class="eyebrow">Workspace</div>', unsafe_allow_html=True)
+    page = st.selectbox("Open page", ["Job analysis", "My profile"], key="workspace_page")
+    st.markdown(
                 '<div class="eyebrow">Coming next</div>'
-                '<div class="roadmap">My profile <small>PLANNED</small></div>'
                 '<div class="roadmap">Proposals <small>PLANNED</small></div>'
                 '<div class="roadmap">Applications <small>PLANNED</small></div>', unsafe_allow_html=True)
     st.divider()
-    mode = st.radio("Analysis mode", ["Sample walkthrough", "Connected model"])
-    st.caption("Explore a sample, or analyze your own opportunity with a connected model.")
+    if page == "Job analysis":
+        mode = st.radio("Analysis mode", ["Sample walkthrough", "Connected model"])
+        st.caption("Explore a sample, or analyze your own opportunity with a connected model.")
     st.markdown('<div class="workspace"><strong>Your freelance workspace</strong>One opportunity at a time.</div>', unsafe_allow_html=True)
+
+if page == "My profile":
+    render_profile()
+    st.stop()
 
 st.markdown('<div class="topline"><span>WORKSPACE &nbsp; / &nbsp; JOB ANALYSIS</span><span class="pill">FIRST LOOK · LOCAL PREVIEW</span></div>', unsafe_allow_html=True)
 st.title("Find clarity before you apply.")

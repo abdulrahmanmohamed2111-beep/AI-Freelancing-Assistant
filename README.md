@@ -5,6 +5,17 @@ English UI and proposals; multiple freelance domains with a technical focus.
 
 ## Current milestone
 
+My Profile now supports editable details, skills, hourly rate, weekly availability,
+project creation/editing, per-project review and JSON export. Select My profile
+from Open page. Synthetic demo and personal profiles have separate storage slots;
+loading synthetic fixtures never populates the personal profile.
+
+Profiles persist in the Git-ignored `data/profiles.sqlite3` on the application host.
+This is a single-user local implementation, not authenticated multi-user storage.
+Set `FREELANCE_DATA_DIR` to override the storage directory (used by isolated tests).
+Before online deployment, add access control and migrate to durable hosted storage.
+CV upload, extraction and RAG are still pending.
+
 Streamlit job intake and a LangGraph workflow:
 `START -> prepare -> analyze -> verify -> END`.
 Failed JSON/schema/evidence validation routes back to analyze once, then stops.
@@ -59,7 +70,7 @@ for cloud deployment. Remote job text is transmitted to the configured provider.
 
 Deploy this directory as the repository root; select `app.py` as the Streamlit
 entrypoint. Configure credentials through deployment secrets, never source code.
-This milestone stores results only in the current Streamlit session. It is not
+Job analysis results remain only in the current Streamlit session; profiles persist locally. It is not
 yet the persistent final application. Use synthetic jobs for a public demo until
 authentication and data retention controls are implemented.
 
