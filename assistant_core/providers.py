@@ -21,6 +21,10 @@ class ProviderError(RuntimeError):
     """Safe error text; never include response bodies or credentials."""
 
 
+class ModelOutputError(ProviderError):
+    """Provider rejected generated JSON; callers may retry a bounded number of times."""
+
+
 @dataclass(frozen=True)
 class Settings:
     provider: str
@@ -72,6 +76,19 @@ def generate(settings: Settings, job: str, feedback: str = "", *, output_schema=
     except httpx.TimeoutException:
         raise ProviderError("The model timed out. Try again or choose a faster model.") from None
     except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 400:
+            try:
+                error = exc.response.json().get("error", {})
+                code = error.get("code") if isinstance(error, dict) else None
+            except (ValueError, AttributeError):
+                code = None
+            if code in {"json_validate_failed", "json_generation_failed"}:
+                raise ModelOutputError("The provider could not generate valid JSON. Please retry extraction.") from None
+            if code in {"context_length_exceeded", "string_above_max_length"}:
+                raise ProviderError("The model rejected the input length. Shorten the CV text and try again.") from None
+            if code in {"model_decommissioned", "model_not_found"}:
+                raise ProviderError("The configured model is unavailable. Update the model name in local settings.") from None
+            raise ProviderError("The model service rejected the request (HTTP 400). Check the selected model and input length. Your profile has not changed.") from None
         if exc.response.status_code == 401:
             raise ProviderError("The API key was rejected. Check your local model settings.") from None
         if exc.response.status_code == 429:

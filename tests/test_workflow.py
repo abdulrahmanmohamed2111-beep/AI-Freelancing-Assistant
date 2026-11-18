@@ -11,6 +11,15 @@ from assistant_core.workflow import build_graph
 
 
 class WorkflowTests(unittest.TestCase):
+    @patch("assistant_core.providers.httpx.post")
+    def test_400_json_failure_classified_without_leaking_response(self, post):
+        from assistant_core.providers import ModelOutputError
+        post.return_value = httpx.Response(400, request=httpx.Request("POST", "https://example.com"),
+            json={"error": {"code": "json_validate_failed", "message": "private CV text", "failed_generation": "private"}})
+        with self.assertRaises(ModelOutputError) as caught:
+            generate(Settings("compatible_api", "https://example.com/v1", "model", "secret"), SAMPLE_JOB)
+        self.assertNotIn("private", str(caught.exception))
+
     def test_sample_succeeds(self):
         result = build_graph(lambda *_: json.dumps(SAMPLE_ANALYSIS)).invoke({"job_text": SAMPLE_JOB})
         self.assertEqual(result["analysis"]["budget"], "$500")

@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pypdf import PdfReader
 
 from assistant_core.profile import Profile, Project
-from assistant_core.providers import generate
+from assistant_core.providers import generate, ModelOutputError
 
 
 class CVProject(BaseModel):
@@ -112,7 +112,12 @@ def extract_cv(settings, text):
     validate_text(text)
     feedback = ""
     for attempt in range(2):
-        raw = generate(settings, text, feedback, output_schema=CVExtraction.model_json_schema(), system_prompt=PROMPT)
+        try:
+            raw = generate(settings, text, feedback, output_schema=CVExtraction.model_json_schema(), system_prompt=PROMPT)
+        except ModelOutputError:
+            feedback = "Generate a complete valid JSON object matching the schema. Keep text concise and escape strings correctly."
+            reason = "The provider could not generate valid JSON for the CV."
+            continue
         # Some compatible endpoints wrap otherwise valid JSON in Markdown.
         stripped = raw.strip()
         if stripped.startswith("```") and stripped.endswith("```"):

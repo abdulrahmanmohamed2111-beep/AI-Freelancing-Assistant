@@ -23,6 +23,12 @@ def draft():
 
 
 class CVTests(unittest.TestCase):
+    def test_provider_json_failure_is_repaired(self):
+        from assistant_core.providers import ModelOutputError
+        with patch("assistant_core.cv.generate", side_effect=[ModelOutputError("Invalid JSON"), draft().model_dump_json()]) as generate:
+            self.assertEqual(extract_cv(None, TEXT).display_name, "Demo Freelancer")
+        self.assertEqual(generate.call_count, 2)
+
     def test_whitespace_quote_restores_original_span(self):
         changed = TEXT.replace("Python and FastAPI", "Python\n and\u00a0FastAPI")
         with patch("assistant_core.cv.generate", return_value=draft().model_dump_json()):
