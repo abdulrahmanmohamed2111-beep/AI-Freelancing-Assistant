@@ -1,0 +1,43 @@
+# قاعدة البيانات وخطة ربط المراحل
+
+## ما تم تجهيزه
+
+PostgreSQL 17 مع pgvector داخل Docker Compose. المكتبة المسؤولة عن الاتصال هي psycopg.
+setup_database.py يشغّل الخدمة ويطبّق migrations مرقمة ثم يستورد البروفايلات من SQLite إذا لم تكن موجودة في PostgreSQL.
+تبقى SQLite الأصلية محفوظة، ولا تُفعّل إعدادات PostgreSQL للتطبيق إلا بعد نجاح الإعداد والاستيراد.
+
+```powershell
+..\..\work\venv\Scripts\python.exe setup_database.py
+..\..\work\venv\Scripts\python.exe check_database.py
+```
+
+يجب تشغيل Docker Desktop بوضع Linux containers أولًا. أول تشغيل يحتاج تنزيل صورة PostgreSQL/pgvector.
+قاعدة البيانات تستمع محليًا على 55432، وملف .env يحتوي كلمة مرور عشوائية. إعداد اتصال التطبيق موجود في data/database.json.
+الملفان مستبعدان من Git. لا تشغّل docker compose down -v لأنه يحذف volume البيانات.
+التشغيل اللاحق: docker compose up -d. الإيقاف دون حذف البيانات: docker compose stop.
+
+## مسؤوليات الجداول
+
+- profiles وprofile_versions: البروفايل الحالي وتاريخ نسخه. التحديث يرفض الكتابة اعتمادًا على نسخة قديمة.
+- projects: المشاريع المعتمدة أو غير المراجعة مرتبطة بمساحة البروفايل.
+- documents: مخطط حفظ الملف الأصلي والنص المعتمد وhash. ربط الرفع بهذا الجدول ما زال مطلوبًا.
+- document_chunks: المقاطع، المراجع، vector، واسم الموديل وأبعاده. لم يبدأ توليد embeddings أو تنفيذ retrieval بعد.
+- jobs: الفرص ومنع تكرار وصفها في نفس المساحة.
+- workflow_runs: نسخة الإعلان ونسخة البروفايل وحالة المعالجة ومرجع checkpoint.
+- stage_results: نتائج analysis وretrieval وmatching وestimation وproposal وreview، مع input_refs وإصداراتها.
+- proposals: العرض الفني والمالي وإصداراتهما وحالة الاعتماد.
+- application_events: تاريخ حالات التقديم.
+
+تحديث البروفايل يعلّم التشغيلات والعروض القديمة بأنها stale. علاقات مركبة بمساحة البيانات تمنع ربط سجل demo بسجل personal بالخطأ.
+ده فصل لمساحتين داخل تطبيق مستخدم واحد، وليس نظام حسابات متعددة أو حماية multi-tenant كاملة.
+
+الـembedding غير محدد الأبعاد في المخطط كي نختار موديله بعد التقييم. يجب استخدام نفس الموديل والأبعاد للفهرسة والاستعلام.
+فهرس تقريبي HNSW لم يُضف؛ يبدأ التنفيذ ببحث دقيق ثم يُضاف فهرس مناسب بعد تثبيت الموديل وقياس الحاجة.
+
+## حالة التنفيذ
+
+الـadapter ومخطط migrations واختبار التكامل جاهزون. تشغيل PostgreSQL والتحقق الفعلي يعتمدان على عمل Docker Desktop.
+الحفظ في التطبيق يظل SQLite إذا لم يتفعّل PostgreSQL. لا يوجد fallback صامت بعد تفعيله؛ خطأ الاتصال يظهر بدل فقد البيانات.
+الجداول الخاصة بالوظائف والـAgents والملفات والـvectors تجهيز معماري؛ الخدمات التي تقرأ وتكتب فيها ستُنفذ في المراحل التالية.
+
+المراجع: https://github.com/pgvector/pgvector و https://www.psycopg.org/psycopg3/docs/basic/install.html

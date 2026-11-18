@@ -81,6 +81,10 @@ def validate_workspace(workspace):
 
 def load_profile(workspace: Literal["personal", "demo"]) -> tuple[Profile, int]:
     validate_workspace(workspace)
+    from assistant_core import database
+    if database.database_url():
+        row = database.load(workspace)
+        return (Profile.model_validate(row[0]), row[1]) if row else (Profile(), 0)
     with connect() as db:
         row = db.execute("SELECT payload, revision FROM profiles WHERE workspace=?", (workspace,)).fetchone()
     return (Profile.model_validate_json(row[0]), row[1]) if row else (Profile(), 0)
@@ -90,6 +94,9 @@ def save_profile(workspace: str, profile: Profile, revision: int) -> int:
     validate_workspace(workspace)
     # Revalidate mutated objects before persisting them.
     payload = Profile.model_validate(profile.model_dump()).model_dump_json()
+    from assistant_core import database
+    if database.database_url():
+        return database.save(workspace, json.loads(payload), revision)
     with connect() as db:
         db.execute("BEGIN IMMEDIATE")
         row = db.execute("SELECT revision FROM profiles WHERE workspace=?", (workspace,)).fetchone()

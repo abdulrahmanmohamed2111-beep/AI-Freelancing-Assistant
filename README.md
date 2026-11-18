@@ -5,6 +5,14 @@ English UI and proposals; multiple freelance domains with a technical focus.
 
 ## Current milestone
 
+PostgreSQL + pgvector infrastructure and a versioned schema are prepared in
+`compose.yaml` and `migrations/`. See `DATABASE_AR.md`. Run `setup_database.py`
+with Docker Desktop running to migrate existing local profiles, then
+`check_database.py` for rollback-only integration checks. Until setup succeeds,
+the app retains SQLite storage. This infrastructure has not yet been validated
+against a running database on this machine; agent/vector tables are schema
+preparation, not completed RAG or workflow persistence.
+
 My Profile now supports editable details, skills, education, experience, weekly availability,
 project creation/editing, per-project review and JSON export. Select My profile
 from Open page. Synthetic demo and personal profiles have separate storage slots;

@@ -15,7 +15,9 @@ def render_profile():
     st.write("Build a clear record of your skills and the work that supports them.")
     selection = st.radio("Profile workspace", ["My real profile", "Synthetic demo"], horizontal=True)
     workspace = "demo" if selection == "Synthetic demo" else "personal"
-    st.caption("Saved locally on this app's host. Manual edits stay local; CV extraction uses your configured AI provider.")
+    from assistant_core.database import database_url
+    storage = "PostgreSQL" if database_url() else "local SQLite (development)"
+    st.caption(f"Storage: {storage}. Manual edits stay on the app host; CV extraction uses your configured AI provider.")
     try:
         profile, revision = load_profile(workspace)
     except (ValueError, sqlite3.Error, OSError):
