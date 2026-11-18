@@ -23,6 +23,26 @@ def draft():
 
 
 class CVTests(unittest.TestCase):
+    def test_whitespace_quote_restores_original_span(self):
+        changed = TEXT.replace("Python and FastAPI", "Python\n and\u00a0FastAPI")
+        with patch("assistant_core.cv.generate", return_value=draft().model_dump_json()):
+            result = extract_cv(None, changed)
+        self.assertIn(result.projects[0].source_quote, changed)
+
+    def test_invalid_schema_repaired_once(self):
+        with patch("assistant_core.cv.generate", side_effect=["invalid", draft().model_dump_json()]) as generate:
+            result = extract_cv(None, TEXT)
+        self.assertEqual(result.display_name, "Demo Freelancer")
+        self.assertEqual(generate.call_count, 2)
+        self.assertIn("Schema errors", generate.call_args.args[2])
+
+    def test_unsupported_quote_is_retried_and_never_accepted(self):
+        bad = draft(); bad.projects[0].source_quote = "Invented cloud deployment"
+        with patch("assistant_core.cv.generate", return_value=bad.model_dump_json()) as generate:
+            with self.assertRaisesRegex(ValueError, "traceable source quotes"):
+                extract_cv(None, TEXT)
+        self.assertEqual(generate.call_count, 2)
+
     def test_txt_and_invalid_inputs(self):
         self.assertIn("Inventory", read_cv("cv.txt", TEXT.encode()))
         for name, content in [("cv.pdf", b"not PDF"), ("cv.txt", b"short"), ("cv.docx", b"x"*100), ("cv.txt", b"x"*(5*1024*1024+1))]:

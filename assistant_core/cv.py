@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 import re
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pypdf import PdfReader
 
 from assistant_core.profile import Profile, Project
@@ -37,6 +37,8 @@ skills, roles, education, dates and projects. Do not infer credentials, invent m
 or upgrade a learning prototype to professional work. Keep unknown strings empty and
 unknown lists empty. Exclude contact details, addresses, birth dates and national IDs.
 For each project include a nonempty verbatim source_quote from the supplied text.
+Copy source_quote in the original language, even when the description is in English.
+education and experience must be plain text strings, not lists or objects.
 Do not generate projects that are absent. Preserve explicit synthetic/demo labels.
 """
 
@@ -91,17 +93,48 @@ def redact_contacts(text):
     return text
 
 
+def source_span(quote: str, text: str) -> str:
+    """Match only whitespace variations; return the actual original source span."""
+    if not quote.strip():
+        raise ValueError("Empty source quote")
+    if quote in text:
+        return quote
+    # PDFs often insert newlines or nonbreaking spaces between words. Do not
+    # allow paraphrases, translated quotes, or fuzzy semantic matches.
+    pattern = r"\s+".join(re.escape(word) for word in quote.split())
+    match = re.search(pattern, text)
+    if match is None:
+        raise ValueError("Untraceable source quote")
+    return match.group(0)
+
+
 def extract_cv(settings, text):
     validate_text(text)
-    raw = generate(settings, text, output_schema=CVExtraction.model_json_schema(), system_prompt=PROMPT)
-    try:
-        draft = CVExtraction.model_validate_json(raw)
-        for project in draft.projects:
-            if not project.source_quote.strip() or project.source_quote not in text:
-                raise ValueError("Untraceable quote")
-        return draft
-    except ValueError:
-        raise ValueError("The model returned an invalid CV draft or unsupported source quotes. Please try again; your profile has not changed.") from None
+    feedback = ""
+    for attempt in range(2):
+        raw = generate(settings, text, feedback, output_schema=CVExtraction.model_json_schema(), system_prompt=PROMPT)
+        # Some compatible endpoints wrap otherwise valid JSON in Markdown.
+        stripped = raw.strip()
+        if stripped.startswith("```") and stripped.endswith("```"):
+            stripped = re.sub(r"^```(?:json)?\s*", "", stripped, count=1).removesuffix("```").strip()
+        try:
+            draft = CVExtraction.model_validate_json(stripped)
+        except ValidationError as exc:
+            # Send schema locations/types only, never echo sensitive model output.
+            issues = "; ".join(".".join(map(str, e["loc"])) + ": " + e["type"] for e in exc.errors()[:12])
+            feedback = "Return a complete corrected JSON object. Schema errors: " + issues
+            reason = "The model could not format the CV fields correctly."
+            continue
+        try:
+            for project in draft.projects:
+                project.source_quote = source_span(project.source_quote, text)
+            return draft
+        except ValueError:
+            feedback = ("Return a complete corrected JSON object. A project source_quote was not found in the CV. "
+                        "Copy short exact excerpts from the source in its ORIGINAL language; never translate or paraphrase quotes. "
+                        "Omit any project that is not supported by the source.")
+            reason = "The model could not provide traceable source quotes for the projects."
+    raise ValueError(reason + " One automatic correction was attempted. Your profile has not changed. Try checking the extracted source text or using a clearer text-based CV.")
 
 
 def apply_cv(profile: Profile, draft: CVExtraction, text: str) -> Profile:
