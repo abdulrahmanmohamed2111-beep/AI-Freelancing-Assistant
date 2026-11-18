@@ -10,6 +10,11 @@ from assistant_core.sample import SAMPLE_ANALYSIS, SAMPLE_JOB
 from assistant_core.workflow import build_graph
 from ui import evidence_card, styles
 from profile_page import render_profile
+from rag_ui import render_match
+from assistant_core.profile import load_profile
+from assistant_core.rag import retrieve
+from assistant_core.matching import match_requirements
+from assistant_core.runs import persist_match
 
 st.set_page_config(page_title="Freelance AI | Job analysis", page_icon="🔎", layout="wide")
 styles()
@@ -51,6 +56,14 @@ st.markdown('<p class="intro">Turn a job description into clear requirements, us
 if mode == "Sample walkthrough":
     st.markdown('<div class="demo-note"><strong>You’re exploring a sample.</strong> This walkthrough uses a fixed job and predefined results. No AI model is called.</div>', unsafe_allow_html=True)
 
+include_match = False
+if mode == "Connected model":
+    include_match = st.checkbox("Include evidence-based profile matching", value=False)
+    if include_match:
+        selected_profile = st.selectbox("Match against", ["My real profile", "Synthetic demo"])
+        workspace = "demo" if selected_profile == "Synthetic demo" else "personal"
+        st.caption("Build the selected profile's evidence index in My profile first. Retrieved source excerpts are sent to the configured model for matching.")
+
 entry, guide = st.columns([1.8, 1], gap="large")
 with entry:
     with st.container(border=True):
@@ -87,7 +100,14 @@ if analyze_clicked:
             model_call = partial(generate, settings)
         started = time.perf_counter()
         with st.spinner("Analyzing requirements and checking evidence…"):
-            result = build_graph(model_call).invoke({"job_text": job})
+            if include_match:
+                _, profile_revision = load_profile(workspace)
+                graph = build_graph(model_call,
+                    retrieve=lambda analysis: retrieve(workspace,analysis,profile_revision),
+                    match=lambda analysis,evidence: match_requirements(settings,analysis,evidence))
+            else:
+                graph = build_graph(model_call)
+            result = graph.invoke({"job_text": job})
         if result["error"]:
             st.error(result["error"] + " Try another model or revise the job text.")
         else:
@@ -95,11 +115,16 @@ if analyze_clicked:
                 "result": result, "job": job, "mode": mode,
                 "seconds": round(time.perf_counter() - started, 2),
             }
-    except (ValueError, ProviderError) as exc:
+            if include_match:
+                run_id = persist_match(workspace,job,result,profile_revision)
+                st.session_state.analysis_result.update(workspace=workspace,profile_revision=profile_revision,run_id=run_id)
+    except (ValueError, ProviderError,OSError) as exc:
+        st.session_state.pop("analysis_result",None)
         st.error(str(exc))
 
 saved = st.session_state.get("analysis_result")
-if saved and saved["job"] == job and saved["mode"] == mode:
+same_match_selection = bool(saved) and (("matching" in saved["result"]) == include_match) and (not include_match or saved.get("workspace") == workspace)
+if saved and saved["job"] == job and saved["mode"] == mode and same_match_selection:
     result = saved["result"]
     analysis = result["analysis"]
     st.divider()
@@ -130,6 +155,7 @@ if saved and saved["job"] == job and saved["mode"] == mode:
     st.caption(f"Completed in {saved['seconds']}s. Source quotes are checked automatically; review their meaning yourself.")
     st.download_button("Download analysis JSON", json.dumps(analysis, indent=2),
                        file_name="job-analysis.json", mime="application/json")
+    render_match(saved)
 else:
     st.markdown('<div class="empty"><div class="empty-icon">◎</div><strong>Your opportunity brief will appear here</strong>'
                 '<p>Analyze the description to explore requirements, evidence, and open questions.</p></div>', unsafe_allow_html=True)

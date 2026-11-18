@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from assistant_core.profile import Profile, Project, demo_profile, load_profile, parse_skills, save_profile
 from cv_page import render_cv
+from rag_ui import render_index
 
 
 def render_profile():
@@ -95,9 +96,11 @@ def render_profile():
             except ValidationError:
                 st.error("Add a project title and a description of at least 20 characters.")
     st.divider()
+    render_index(workspace)
+    st.divider()
     st.download_button("Export profile JSON", json.dumps({"synthetic": workspace == "demo", "profile": profile.model_dump()}, indent=2),
                        file_name=f"{workspace}-profile.json", mime="application/json")
-    st.caption("Next milestone: retrieval from reviewed experience with source citations.")
+    st.caption("Use this profile's evidence index in Job analysis to assess fit with source citations.")
 
 
 def persist(workspace, profile, revision):

@@ -7,6 +7,7 @@ class Requirement(BaseModel):
     model_config = ConfigDict(extra="forbid")
     description: str = Field(min_length=1)
     kind: Literal["explicit", "inferred"]
+    category: Literal["capability", "constraint"] = "capability"
     evidence_quote: str = Field(description="Exact quote from the job supporting this item")
 
 
@@ -28,3 +29,7 @@ def validate_analysis(raw: str, job_text: str) -> JobAnalysis:
         if not quote or quote not in job_text:
             raise ValueError("A requirement has a missing or untraceable evidence quote.")
     return analysis
+
+
+def capability_requirements(analysis):
+    return [r for r in analysis["requirements"] if r["kind"] == "explicit" and r.get("category","capability") == "capability"]

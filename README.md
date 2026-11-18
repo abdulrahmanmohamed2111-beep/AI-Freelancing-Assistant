@@ -5,6 +5,13 @@ English UI and proposals; multiple freelance domains with a technical focus.
 
 ## Current milestone
 
+Evidence retrieval and matching now extend the connected LangGraph workflow.
+See `RAG_AR.md` for indexing, privacy, scoring, versioning and evaluation limits.
+Apply migrations (setup_database.py) after updating. Reviewed CV text/projects
+are embedded locally with FastEmbed; pgvector retrieves evidence per capability.
+Groq assesses coverage with validated citations; completed stage outputs persist
+in PostgreSQL. The sample walkthrough remains a fixed fixture.
+
 PostgreSQL + pgvector infrastructure and a versioned schema are prepared in
 `compose.yaml` and `migrations/`. See `DATABASE_AR.md`. Run `setup_database.py`
 with Docker Desktop running to migrate existing local profiles, then
@@ -13,7 +20,7 @@ the app retains SQLite storage. Local PostgreSQL integration checks passed:
 vector distance, profile round trip, normalized project rows, revision history
 and stale-write rejection. Two legacy profile payloads matched their SQLite
 source after migration. Agent/vector tables remain schema preparation, not
-completed RAG or workflow persistence.
+full agent workflow persistence. Retrieval/matching stage persistence is now implemented.
 
 My Profile now supports editable details, skills, education, experience, weekly availability,
 project creation/editing, per-project review and JSON export. Select My profile
@@ -39,7 +46,7 @@ update matching project IDs rather than duplicating them. Changed source files
 can create additional projects and should be reviewed before approval.
 
 Hourly rate has been removed from profiles and old saved records are migrated.
-Pricing belongs to a future per-job estimate. RAG is still pending.
+Pricing belongs to a future per-job estimate. RAG retrieval and matching are available through the evidence index.
 Try `fixtures/synthetic/demo_cv.txt` in the Synthetic demo workspace.
 
 Streamlit job intake and a LangGraph workflow:
@@ -102,14 +109,14 @@ authentication and data retention controls are implemented.
 
 ## Remaining milestones
 
-1. Reviewed profile and document ingestion; RAG with source references.
-2. Matching with an explicit scoring rubric and estimation calculation tools.
+1. Durable original-CV file management, broader retrieval evaluations and ranking improvements.
+2. Calibration of matching scores/critical gaps and estimation calculation tools.
 3. Proposal and reviewer agents, bounded revision and human approval.
 4. Durable graph checkpoints, application tracking and PostgreSQL/pgvector.
 5. Labeled evaluations, deployment hardening and final demonstration.
 
-RAG, multi-agent tools, persistence and approval are requirements for the final
-project; they are not implemented in this first analysis slice.
+RAG retrieval and cited matching now run after analysis. Estimation, technical and
+financial proposals, reviewer loops and durable LangGraph checkpoints remain pending.
 
 ## References
 

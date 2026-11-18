@@ -14,6 +14,9 @@ must include an exact, nonempty quote from the original job text supporting it.
 Do not invent credentials, skills, budgets, dates, or client requirements.
 Use null for unspecified budget/deadline. List unknowns in missing_information.
 Tasks should reflect requested deliverables. Inferences are suggestions, not obligations.
+Set category=capability for skills, experience and technical deliverables; set
+category=constraint for budget, deadlines, availability, location and commercial terms.
+Budget and deadlines are not skills. They must never be treated as evidence of experience.
 """
 
 
@@ -64,6 +67,8 @@ def generate(settings: Settings, job: str, feedback: str = "", *, output_schema=
     else:
         endpoint = settings.base_url.rstrip("/") + "/chat/completions"
         body.update(temperature=0, response_format={"type": "json_object"})
+        if url.hostname == "api.groq.com" and settings.model.startswith("openai/gpt-oss-"):
+            body.update(reasoning_effort="low", max_completion_tokens=4096)
     try:
         response = httpx.post(endpoint, json=body, headers=headers, timeout=90)
         response.raise_for_status()

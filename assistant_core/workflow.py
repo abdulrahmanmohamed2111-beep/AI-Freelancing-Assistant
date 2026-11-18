@@ -11,9 +11,11 @@ class AnalysisState(TypedDict, total=False):
     analysis: dict
     attempts: int
     error: str
+    retrieval: list
+    matching: dict
 
 
-def build_graph(generate: Callable[[str, str], str]):
+def build_graph(generate: Callable[[str, str], str], *, retrieve=None, match=None):
     """A first workflow slice: validate input -> analyze -> verify -> retry once."""
     def prepare(state: AnalysisState):
         job = state.get("job_text", "").strip()
@@ -35,8 +37,13 @@ def build_graph(generate: Callable[[str, str], str]):
         except ValueError:
             return {"analysis": {}, "error": "The model output failed schema or evidence validation."}
 
+    if (retrieve is None) != (match is None):
+        raise ValueError("Retrieval and matching must be configured together.")
+
     def route(state: AnalysisState):
-        return "analyze" if state["error"] and state["attempts"] < 2 else END
+        if state["error"]:
+            return "analyze" if state["attempts"] < 2 else END
+        return "retrieve" if retrieve else END
 
     graph = StateGraph(AnalysisState)
     graph.add_node("prepare", prepare)
@@ -45,5 +52,12 @@ def build_graph(generate: Callable[[str, str], str]):
     graph.add_edge(START, "prepare")
     graph.add_edge("prepare", "analyze")
     graph.add_edge("analyze", "verify")
-    graph.add_conditional_edges("verify", route, {"analyze": "analyze", END: END})
+    routes = {"analyze":"analyze",END:END}
+    if retrieve:
+        graph.add_node("retrieve", lambda state: {"retrieval":retrieve(state["analysis"])})
+        graph.add_node("match", lambda state: {"matching":match(state["analysis"],state["retrieval"])})
+        graph.add_edge("retrieve","match")
+        graph.add_edge("match",END)
+        routes["retrieve"] = "retrieve"
+    graph.add_conditional_edges("verify", route, routes)
     return graph.compile()

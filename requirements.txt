@@ -4,3 +4,4 @@ pydantic==2.14.3
 httpx==0.28.1
 pypdf==7.1.0
 psycopg[binary]==3.3.9
+fastembed==0.9.1
