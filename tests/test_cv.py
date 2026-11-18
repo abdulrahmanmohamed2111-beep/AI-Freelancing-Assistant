@@ -45,8 +45,10 @@ class CVTests(unittest.TestCase):
     def test_unsupported_quote_is_retried_and_never_accepted(self):
         bad = draft(); bad.projects[0].source_quote = "Invented cloud deployment"
         with patch("assistant_core.cv.generate", return_value=bad.model_dump_json()) as generate:
-            with self.assertRaisesRegex(ValueError, "traceable source quotes"):
-                extract_cv(None, TEXT)
+            result = extract_cv(None, TEXT)
+            self.assertEqual(result.projects[0].source_quote, "")
+            with self.assertRaises(ValueError):
+                apply_cv(Profile(), result, TEXT)
         self.assertEqual(generate.call_count, 2)
 
     def test_txt_and_invalid_inputs(self):
@@ -77,8 +79,8 @@ class CVTests(unittest.TestCase):
         with patch("assistant_core.cv.generate", return_value=draft().model_dump_json()):
             self.assertEqual(extract_cv(None, TEXT).display_name, "Demo Freelancer")
         bad = draft(); bad.projects[0].source_quote = "Unstated AWS expertise"
-        with patch("assistant_core.cv.generate", return_value=bad.model_dump_json()), self.assertRaises(ValueError):
-            extract_cv(None, TEXT)
+        with patch("assistant_core.cv.generate", return_value=bad.model_dump_json()):
+            self.assertEqual(extract_cv(None, TEXT).projects[0].source_quote, "")
 
     def test_reimport_is_idempotent_and_preserves_availability(self):
         original = Profile(display_name="Old", availability_hours_per_week=12, education="Existing education")

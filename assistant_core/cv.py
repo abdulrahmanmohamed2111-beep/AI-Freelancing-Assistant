@@ -17,7 +17,7 @@ class CVProject(BaseModel):
     description: str = Field(min_length=20, max_length=15000)
     role: str = Field(max_length=500)
     technologies: list[str]
-    source_quote: str = Field(min_length=1)
+    source_quote: str
 
 
 class CVExtraction(BaseModel):
@@ -40,6 +40,7 @@ For each project include a nonempty verbatim source_quote from the supplied text
 Copy source_quote in the original language, even when the description is in English.
 education and experience must be plain text strings, not lists or objects.
 Do not generate projects that are absent. Preserve explicit synthetic/demo labels.
+If the source ends mid-sentence, do not complete it or infer the missing words.
 """
 
 
@@ -130,11 +131,21 @@ def extract_cv(settings, text):
             feedback = "Return a complete corrected JSON object. Schema errors: " + issues
             reason = "The model could not format the CV fields correctly."
             continue
-        try:
-            for project in draft.projects:
+        unsupported = []
+        for project in draft.projects:
+            try:
                 project.source_quote = source_span(project.source_quote, text)
+            except ValueError:
+                unsupported.append(project)
+        if not unsupported:
             return draft
-        except ValueError:
+        if attempt == 1:
+            # Preserve a reviewable draft, but never present fabricated quotes
+            # as evidence. Unverified projects are excluded by default in UI.
+            for project in unsupported:
+                project.source_quote = ""
+            return draft
+        else:
             feedback = ("Return a complete corrected JSON object. A project source_quote was not found in the CV. "
                         "Copy short exact excerpts from the source in its ORIGINAL language; never translate or paraphrase quotes. "
                         "Omit any project that is not supported by the source.")
@@ -154,10 +165,12 @@ def apply_cv(profile: Profile, draft: CVExtraction, text: str) -> Profile:
     result.cv_source_id = source_id
     imported = []
     for project in draft.projects:
-        project_id = "cv-" + sha256((source_id + project.source_quote).encode()).hexdigest()[:24]
+        # Enforce evidence again at the persistence boundary, not just in UI.
+        quote = source_span(project.source_quote, text)
+        project_id = "cv-" + sha256((source_id + quote).encode()).hexdigest()[:24]
         imported.append(Project(id=project_id, title=project.title, description=project.description,
                                 role=project.role, technologies=project.technologies, reviewed=True,
-                                source_quote=project.source_quote, source_id=source_id))
+                                source_quote=quote, source_id=source_id))
     ids = {p.id for p in imported}
     result.projects = [p for p in result.projects if p.id not in ids] + imported
     return result

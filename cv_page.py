@@ -6,7 +6,7 @@ import sqlite3
 import streamlit as st
 from pydantic import ValidationError
 
-from assistant_core.cv import CVExtraction, CVProject, apply_cv, extract_cv, read_cv, redact_contacts
+from assistant_core.cv import CVExtraction, CVProject, apply_cv, extract_cv, read_cv, redact_contacts, source_span
 from assistant_core.profile import parse_skills, save_profile
 from assistant_core.providers import Settings, ProviderError
 
@@ -74,15 +74,18 @@ def render_cv(workspace, profile, revision):
         projects = []
         for index, project in enumerate(draft.projects):
             with st.expander(f"Project {index+1}: {project.title}", expanded=True):
-                keep = st.checkbox("Include this project", value=True, key=prefix+f"_{pending['nonce']}_{index}_keep")
+                if not project.source_quote:
+                    st.warning("Evidence needs review. This project is excluded by default. To include it, paste a supporting excerpt copied from the source text and check its description for accuracy.")
+                keep = st.checkbox("Include this project", value=bool(project.source_quote), key=prefix+f"_{pending['nonce']}_{index}_keep")
                 title = st.text_input("Title", project.title, max_chars=160, key=prefix+f"_{pending['nonce']}_{index}_title")
                 description = st.text_area("Description", project.description, max_chars=15000, key=prefix+f"_{pending['nonce']}_{index}_description")
                 role = st.text_input("Role", project.role, max_chars=500, key=prefix+f"_{pending['nonce']}_{index}_role")
                 tech = st.text_input("Technologies", ", ".join(project.technologies), key=prefix+f"_{pending['nonce']}_{index}_tech")
-                st.caption("Source: " + project.source_quote)
+                quote = st.text_area("Supporting source excerpt", project.source_quote, key=prefix+f"_{pending['nonce']}_{index}_quote",
+                                     help="Copy original wording from Text to analyze. Translated or paraphrased excerpts cannot be verified.")
                 if keep:
                     projects.append(dict(title=title, description=description, role=role,
-                                         technologies=parse_skills(tech), source_quote=project.source_quote))
+                                         technologies=parse_skills(tech), source_quote=quote))
         approved = st.checkbox("I reviewed these details and approve saving them to this profile")
         submitted = st.form_submit_button("Approve and save profile", type="primary")
     if submitted:
@@ -100,7 +103,10 @@ def render_cv(workspace, profile, revision):
         except ValidationError:
             st.error("Check the project titles and descriptions; each description needs at least 20 characters.")
             return
-        except (ValueError, sqlite3.Error, OSError):
+        except ValueError:
+            st.error("An included project needs a supporting excerpt found in the source text. Correct its excerpt or uncheck Include this project.")
+            return
+        except (sqlite3.Error, OSError):
             st.error("Could not save this draft. Reload if your profile changed in another session.")
             return
         st.session_state.pop(prefix+"_draft", None)
